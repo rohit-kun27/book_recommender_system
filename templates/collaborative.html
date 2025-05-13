@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Collaborative Filtering</h2>
+
+<form action="/collaborative" method="POST" style="margin-bottom: 30px;">
+    <input name="user_input" type="text" class="form-control" placeholder="Enter a book title" style="padding: 10px; width: 300px; margin-bottom: 10px;">
+    <br>
+    <input type="submit" class="btn btn-lg btn-warning" value="Recommend" style="padding: 10px 20px;">
+</form>
+
+{% if message %}
+    <p style="color:red;">{{ message }}</p>
+{% endif %}
+
+{% if books and books|length > 0 %}
+<h3>Recommended Books:</h3>
+<table>
+    <tr><th>Title</th><th>Author</th></tr>
+    {% for book in books %}
+        <tr><td>{{ book[0] }}</td><td>{{ book[1] }}</td></tr>
+    {% endfor %}
+</table>
+{% endif %}
+{% endblock %}

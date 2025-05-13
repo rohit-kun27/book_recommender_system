@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Demographic-Based Recommendations by Age</h2>
+
+<form method="POST" style="margin-bottom: 30px;">
+    <label for="age">Enter Your Age:</label><br><br>
+    <input name="age" type="number" min="10" max="100" required style="padding: 10px; width: 250px;"><br><br>
+    <input type="submit" class="btn btn-lg btn-warning" value="Get Recommendations" style="padding: 10px 20px;">
+</form>
+
+{% if books %}
+<h3>Recommended Books:</h3>
+<table>
+    <tr>
+        <th>Title</th>
+        <th>Avg Rating</th>
+    
+    </tr>
+    {% for book in books %}
+    <tr>
+        <td>{{ book[0] }}</td>
+        <td>{{ book[1] }}</td>
+        
+    </tr>
+    {% endfor %}
+</table>
+{% endif %}
+{% endblock %}
