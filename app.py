@@ -1,65 +1,80 @@
 import streamlit as st
 import pickle
-import numpy as np
 import pandas as pd
+import numpy as np
 
-# Load your pickle files
-popular_df = pickle.load(open('popular.pkl','rb'))
-pt = pickle.load(open('pt.pkl','rb'))
-books = pickle.load(open('books.pkl','rb'))
-similarity_score = pickle.load(open('similarity_score.pkl','rb'))
-demographic_df = pickle.load(open('demographic_df.pkl','rb'))
+# Load pickled files
+popular_df = pickle.load(open('popular.pkl', 'rb'))
+pt = pickle.load(open('pt.pkl', 'rb'))
+books = pickle.load(open('books.pkl', 'rb'))
+similarity_score = pickle.load(open('similarity_score.pkl', 'rb'))
+demographic_df = pickle.load(open('demographic_df.pkl', 'rb'))
+
 
 popular_df['avg_rating'] = popular_df['avg_rating'].round(2)
 
-st.title("📚 Book Recommender System")
+# App title
+st.title("📖 Book Recommender System")
 
 # Sidebar navigation
-option = st.sidebar.radio("Choose Recommender", ["Top Books", "Collaborative", "Demographic"])
+option = st.sidebar.radio("Choose Recommender Type", 
+    ["📚 Popular Books", "🤝 Collaborative Filtering", "👤 Demographic-Based"]
+)
 
-# Top 50 books
-if option == "Top Books":
-    st.header("🔥 Top 50 Popular Books")
-    st.table(popular_df[['book_title','book_author','avg_rating']].head(50))
+# 1. Popular Books
+if option == "📚 Popular Books":
+    st.header("Top 50 Popular Books")
+    st.dataframe(popular_df[['book_title', 'book_author', 'avg_rating']].head(50))
 
-# Collaborative Filtering
-elif option == "Collaborative":
-    st.header("🤝 Collaborative Filtering")
-    book_name = st.text_input("Enter a Book Name")
+# 2. Collaborative Filtering
+elif option == "🤝 Collaborative Filtering":
+    st.header("Book Recommendation by Book Name")
+
+    book_name = st.text_input("Enter a book title")
 
     if st.button("Recommend"):
-        try:
+        if book_name in pt.index:
             index = np.where(pt.index == book_name)[0][0]
-            similar_items = sorted(list(enumerate(similarity_score[index])), key=lambda x: x[1], reverse=True)[1:6]
+            similar_items = sorted(
+                list(enumerate(similarity_score[index])),
+                key=lambda x: x[1],
+                reverse=True
+            )[1:6]
 
+            data = []
             for i in similar_items:
                 temp_df = books[books['book_title'] == pt.index[i[0]]]
-                st.write(f"**{temp_df['book_title'].values[0]}** by *{temp_df['book_author'].values[0]}*")
-        except:
-            st.warning("Book not found. Please enter an exact name.")
+                title = temp_df.drop_duplicates('book_title')['book_title'].values[0]
+                author = temp_df.drop_duplicates('book_author')['book_author'].values[0]
+                data.append([title, author])
 
-# Demographic Filtering
-elif option == "Demographic":
-    st.header("👤 Demographic Based Recommendations")
-    age = st.slider("Select Age", 10, 100, 25)
+            st.subheader("Recommended Books")
+            st.dataframe(pd.DataFrame(data, columns=['Book Title', 'Author']))
+        else:
+            st.error("Book not found in dataset.")
 
-    age_group = demographic_df[demographic_df['Age'] == age]['age_group'].values
-    if len(age_group) > 0:
-        group = age_group[0]
-        group_df = demographic_df[demographic_df['age_group'] == group]
+# 3. Demographic-Based
+elif option == "👤 Demographic-Based":
+    st.header("Book Recommendation by Age")
 
-        book_stats = group_df.groupby(['isbn', 'book_title']).agg(
-            avgg_rating=('rating', 'mean'),
-            rating_count=('rating', 'count')
-        ).reset_index()
+    age = st.number_input("Enter your age (10-100)", min_value=10, max_value=100, step=1)
 
-        popular_books = book_stats[book_stats['rating_count'] >= 10]
-        top_books = popular_books.sort_values('avgg_rating', ascending=False).head(10)
-        
-        
-        top_books['avgg_rating'] = top_books['avgg_rating'].round(2)
-        
-        st.write("Top Books for your age group:")
-        st.table(top_books[['book_title', 'avgg_rating']])
-    else:
-        st.warning("No data for this age.")
+    if st.button("Get Recommendations"):
+        age_group = demographic_df[demographic_df['Age'] == age]['age_group'].values
+        if len(age_group) == 0:
+            st.warning("No users found in this age group.")
+        else:
+            group = age_group[0]
+            group_df = demographic_df[demographic_df['age_group'] == group]
+
+            book_stats = group_df.groupby(['isbn', 'book_title']).agg(
+                avgg_rating=('rating', 'mean'),
+                rating_count=('rating', 'count')
+            ).reset_index()
+
+            popular_books = book_stats[book_stats['rating_count'] >= 10]
+            top_books = popular_books.sort_values('avgg_rating', ascending=False).head(10)
+            top_books['avgg_rating'] = top_books['avgg_rating'].round(2)
+
+            st.subheader(f"Top Books for Age Group: {group}")
+            st.dataframe(top_books[['book_title', 'avgg_rating']])
